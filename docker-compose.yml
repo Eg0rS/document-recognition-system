@@ -1,37 +1,26 @@
-version: '3.7'
+version: '3.9'
+
+networks:
+  external:
+  internal:
+  files:
+  kafka:
 
 services:
-  database:
-    image: postgres:16
-    restart: always
-    environment:
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'root'
-      POSTGRES_DB: 'production'
-    depends_on:
-      - doc
-    networks:
-      - backend
-    ports:
-      - "5432:5432"
-    volumes:
-      - database-pg:/var/lib/postgresql/data
-        
   api:
     build:
-      context: pdd-backend/
+      context: api/
       dockerfile: Dockerfile
     networks:
-      - backend
+      - external
+      - internal
     ports:
-        - "80:8080"
+      - "8080:8080"
     depends_on:
-      - doc
-      - database
-      - minio
-      - kowl
+      - nginx
+      - kafka
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=${ENV}
     restart: always
     deploy:
       replicas: 1
@@ -41,39 +30,53 @@ services:
         reservations:
           memory: 512M
 
-  doc:
+  file-service:
     build:
-      context: doctest1/
-      dockerfile: Dockerfile
-    volumes:
-     - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - backend
-    ports:
-        - "81:8080"
+      context: file-service
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-    restart: always
+      "env": "${ENV}"
+    depends_on:
+      - minio
+    networks:
+      - internal
+      - files
     deploy:
       replicas: 1
       resources:
         limits:
           memory: 1024M
         reservations:
-          memory: 512M
-
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    restart: on-failure
+          memory: 2048M 
+  
+  ml-processing-service:
+    build: ./ml-processing-service
     networks:
-      - backend
-    ports:
-      - "2181:2181"
+      - internal
+      - kafka
+    depends_on:
+       - file-service
+       - api
+       - kafka
     environment:
-      ZOO_MY_ID: 1
-      ZOO_PORT: 2181
-      ZOO_SERVERS: server.1=zookeeper:2888:3888
-      ALLOW_ANONYMOUS_LOGIN: "yes"
+      - ENV=${ENV}
+    restart: always
+    deploy:
+      replicas: ${REPLICAS}
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9099:9099"
+    networks:
+      - files
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - storage-minio:/data
+    command: server --address ":9099" --console-address ":9000" /data
+    restart: always 
 
   kafka:
     image: bitnami/kafka:latest
@@ -82,7 +85,8 @@ services:
       - "9092:9092"
       - "29092:29092"
     networks:
-      - backend
+      - kafka
+      - internal
     environment:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
@@ -99,56 +103,57 @@ services:
       KAFKA_RESTART_DELAY: "5"
       ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: "0"
     depends_on:
-      - doc
       - zookeeper
+  
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: on-failure
+    networks:
+      - kafka
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=zookeeper:2888:3888
+      ALLOW_ANONYMOUS_LOGIN: "yes"
 
   kowl:
     image: quay.io/cloudhut/kowl:v1.4.0
     restart: on-failure
     networks:
-      - backend
+      - kafka
     volumes:
     - ./kowl_config:/etc/kowl/
     ports:
-    - "8080:8080"
+    - "9090:8080"
     entrypoint: ./kowl --config.filepath=/etc/kowl/config.yaml
     depends_on:
       - kafka
 
-  minio:
-    image: minio/minio:latest
+  nginx:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
     ports:
-      - "9000:9000"
-      - "9099:9099"
+      # These ports are in format <host-port>:<container-port>
+      - '80:80' # Public HTTP Port
+      - '443:443' # Public HTTPS Port
+      - '81:81' # Admin Web Port
+      # Add any other Stream port you want to expose
+      # - '21:21' # FTP
     networks:
-      - backend
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      - external
+    # Uncomment the next line if you uncomment anything in the section
+    # environment:
+      # Uncomment this if you want to change the location of
+      # the SQLite DB file within the container
+      # DB_SQLITE_FILE: "/data/database.sqlite"
+
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
     volumes:
-      - storage-minio:/data
-    command: server --address ":9099" --console-address ":9000" /data
-    restart: always # necessary since it's failing to start sometimes
-
-  ml:
-    build: ./ml-service
-    networks:
-      - backend
-    depends_on:
-      - doc
-      - database
-      - minio
-      - kowl
-    environment:
-      - ENV=Production
-    restart: always
-    deploy:
-      replicas: 1
-        
-networks:
-  backend:
-    driver: bridge
-
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+  
 volumes:
-  database-pg:
   storage-minio:
