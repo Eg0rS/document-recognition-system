@@ -1,0 +1,154 @@
+version: '3.7'
+
+services:
+  database:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'root'
+      POSTGRES_DB: 'production'
+    depends_on:
+      - doc
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
+    volumes:
+      - database-pg:/var/lib/postgresql/data
+        
+  api:
+    build:
+      context: pdd-backend/
+      dockerfile: Dockerfile
+    networks:
+      - backend
+    ports:
+        - "80:8080"
+    depends_on:
+      - doc
+      - database
+      - minio
+      - kowl
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+
+  doc:
+    build:
+      context: doctest1/
+      dockerfile: Dockerfile
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - backend
+    ports:
+        - "81:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: on-failure
+    networks:
+      - backend
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=zookeeper:2888:3888
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+
+  kafka:
+    image: bitnami/kafka:latest
+    restart: on-failure
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - backend
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_LISTENERS: "INTERNAL://:29092,EXTERNAL://:9092"
+      KAFKA_ZOOKEEPER_SESSION_TIMEOUT: "6000"
+      KAFKA_RESTART_ATTEMPTS: "10"
+      KAFKA_RESTART_DELAY: "5"
+      ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: "0"
+    depends_on:
+      - doc
+      - zookeeper
+
+  kowl:
+    image: quay.io/cloudhut/kowl:v1.4.0
+    restart: on-failure
+    networks:
+      - backend
+    volumes:
+    - ./kowl_config:/etc/kowl/
+    ports:
+    - "8080:8080"
+    entrypoint: ./kowl --config.filepath=/etc/kowl/config.yaml
+    depends_on:
+      - kafka
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9099:9099"
+    networks:
+      - backend
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - storage-minio:/data
+    command: server --address ":9099" --console-address ":9000" /data
+    restart: always # necessary since it's failing to start sometimes
+
+  ml:
+    build: ./ml-service
+    networks:
+      - backend
+    depends_on:
+      - doc
+      - database
+      - minio
+      - kowl
+    environment:
+      - ENV=Production
+    restart: always
+    deploy:
+      replicas: 1
+        
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  database-pg:
+  storage-minio:
