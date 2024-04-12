@@ -1,4 +1,5 @@
 ﻿using api.DtoModels;
+using Database.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
@@ -7,10 +8,12 @@ namespace api.Controllers;
 public class DetectController : ControllerBase
 {
     private readonly ILogger<DetectController> logger;
+    private readonly ITestRepository testRepository;
 
-    public DetectController(ILogger<DetectController> logger)
+    public DetectController(ILogger<DetectController> logger, ITestRepository testRepository)
     {
         this.logger = logger;
+        this.testRepository = testRepository;
     }
     
     [HttpPost("detect")]
@@ -26,6 +29,13 @@ public class DetectController : ControllerBase
         // produce kafka message
         // upload to file service
         
+        return Ok();
+    }
+
+    [HttpPost("detect/test")]
+    public IActionResult Test()
+    {
+        testRepository.Execute();
         return Ok();
     }
 }

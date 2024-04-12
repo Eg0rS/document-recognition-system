@@ -6,10 +6,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-
     <ItemGroup>
-      <Folder Include="Database\" />
-      <Folder Include="Files\" />
+      <PackageReference Include="Dapper" Version="2.1.44" />
+      <PackageReference Include="Npgsql" Version="8.0.2" />
     </ItemGroup>
 
 </Project>
