@@ -1,10 +1,15 @@
-﻿FROM golang:1.20 as builder
+FROM golang:1.16.5-alpine3.14 AS builder
 
-EXPOSE 80
+WORKDIR /usr/local/go/src/
 
-WORKDIR /go/src/app
-COPY . .
-RUN chmod +x ./main.go
+ADD app/ /usr/local/go/src/
 
-RUN go build -o app
-CMD ./app
+RUN go clean --modcache
+RUN go build -mod=readonly -o app cmd/main/app.go
+
+FROM alpine:3.14
+
+COPY --from=builder /usr/local/go/src/app /
+COPY --from=builder /usr/local/go/src/config.yml /
+
+CMD ["/app"]

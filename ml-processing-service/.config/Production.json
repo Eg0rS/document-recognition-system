@@ -4,11 +4,5 @@
     "port":"29092",
     "kafka_consumer_topic": "requests",
     "kafka_producer_topic":"resolutions"
-  },
-  "minio": {
-    "endpoint": "minio:9099",
-    "access_key": "minioadmin",
-    "secret_key" : "minioadmin",
-    "bucket": "files"
   }
 }

@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "api", "api\api.csproj", "{9549935F-1651-4296-8058-8FB1DBE993B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{F365A997-1AB6-49E7-86F8-1C70115426C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kafka", "Kafka\Kafka.csproj", "{86F87192-3822-4283-93C7-5FB5ECCC3362}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{9549935F-1651-4296-8058-8FB1DBE993B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9549935F-1651-4296-8058-8FB1DBE993B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9549935F-1651-4296-8058-8FB1DBE993B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F365A997-1AB6-49E7-86F8-1C70115426C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F365A997-1AB6-49E7-86F8-1C70115426C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F365A997-1AB6-49E7-86F8-1C70115426C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F365A997-1AB6-49E7-86F8-1C70115426C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
