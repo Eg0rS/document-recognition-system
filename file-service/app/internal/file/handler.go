@@ -1,11 +1,13 @@
 package file
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/theartofdevel/notes_system/file_service/internal/apperror"
 	"github.com/theartofdevel/notes_system/file_service/pkg/logging"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -17,6 +19,10 @@ const (
 type Handler struct {
 	Logger      logging.Logger
 	FileService Service
+}
+
+type ImageData struct {
+	Image string `json:"image"`
 }
 
 func (h *Handler) Register(router *httprouter.Router) {
@@ -42,8 +48,12 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) error {
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", f.Name))
 	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
-
-	w.Write(f.Bytes)
+	base64String := base64.StdEncoding.EncodeToString(f.Bytes)
+	decodeString, err := base64.StdEncoding.DecodeString(base64String)
+	if err != nil {
+		return err
+	}
+	w.Write(decodeString)
 
 	return nil
 }
@@ -74,30 +84,39 @@ func (h *Handler) CreateFile(w http.ResponseWriter, r *http.Request) error {
 	h.Logger.Info("CREATE FILE")
 	w.Header().Set("Content-Type", "form/json")
 
-	// TODO maximum file size
-	err := r.ParseMultipartForm(32 << 20)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return nil
+	}
+
+	// Декодируем JSON из тела запроса
+	var imageData ImageData
+	if err := json.Unmarshal(body, &imageData); err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return nil
+	}
+
+	// Проверяем наличие строки изображения в запросе
+	if imageData.Image == "" {
+		http.Error(w, "Image data is missing", http.StatusBadRequest)
+		return nil
+	}
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(imageData.Image)
+	if err != nil {
+		return err
+	}
+	key, err := h.FileService.Create(r.Context(), decodedBytes)
 	if err != nil {
 		return err
 	}
 
-	h.Logger.Debug("decode create upload fileInfo dto")
-
-	files, ok := r.MultipartForm.File["file"]
-	if !ok || len(files) == 0 {
-		return apperror.BadRequestError("file required")
-	}
-	fileInfo := files[0]
-	fileReader, err := fileInfo.Open()
-	dto := CreateFileDTO{
-		Name:   fileInfo.Filename,
-		Size:   fileInfo.Size,
-		Reader: fileReader,
-	}
-
-	err = h.FileService.Create(r.Context(), dto)
+	keyBytes, err := json.Marshal(key)
 	if err != nil {
 		return err
 	}
+	w.Write(keyBytes)
 	w.WriteHeader(http.StatusCreated)
 
 	return nil

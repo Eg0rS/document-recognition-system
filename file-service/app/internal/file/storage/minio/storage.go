@@ -85,12 +85,12 @@ func (m *minioStorage) GetFilesByNoteUUID(ctx context.Context) ([]*file.File, er
 	return files, nil
 }
 
-func (m *minioStorage) CreateFile(ctx context.Context, file *file.File) error {
-	err := m.client.UploadFile(ctx, file.ID, file.Name, file.Size, bytes.NewBuffer(file.Bytes))
+func (m *minioStorage) CreateFile(ctx context.Context, filename string, base64 []byte) (string, error) {
+	key, err := m.client.UploadFile(ctx, filename, filename, int64(len(base64)), bytes.NewBuffer(base64))
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return key, nil
 }
 
 func (m *minioStorage) DeleteFile(ctx context.Context, fileId string) error {

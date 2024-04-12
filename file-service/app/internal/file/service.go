@@ -22,7 +22,7 @@ func NewService(noteStorage Storage, logger logging.Logger) (Service, error) {
 type Service interface {
 	GetFile(ctx context.Context, fileName string) (f *File, err error)
 	GetFilesByNoteUUID(ctx context.Context) ([]*File, error)
-	Create(ctx context.Context, dto CreateFileDTO) error
+	Create(ctx context.Context, dto []byte) (string, error)
 	Delete(ctx context.Context, fileName string) error
 }
 
@@ -42,17 +42,16 @@ func (s *service) GetFilesByNoteUUID(ctx context.Context) ([]*File, error) {
 	return files, nil
 }
 
-func (s *service) Create(ctx context.Context, dto CreateFileDTO) error {
-	dto.NormalizeName()
-	file, err := NewFile(dto)
+func (s *service) Create(ctx context.Context, dto []byte) (string, error) {
+	fileName, err := NormalizeName(dto)
 	if err != nil {
-		return err
+		return "", err
 	}
-	err = s.storage.CreateFile(ctx, file)
+	key, err := s.storage.CreateFile(ctx, fileName.String(), dto)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return key, nil
 }
 
 func (s *service) Delete(ctx context.Context, fileName string) error {

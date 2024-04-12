@@ -1,37 +1,31 @@
 package file
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"github.com/google/uuid"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 	"io"
 	"io/ioutil"
-	"strings"
-	"unicode"
 )
 
 type File struct {
-	ID 	  string `json:"id"`
+	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Size  int64  `json:"size"`
 	Bytes []byte `json:"file"`
 }
 
 type CreateFileDTO struct {
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	Reader   io.Reader
+	Name   string `json:"name"`
+	Size   int64  `json:"size"`
+	Reader io.Reader
 }
 
-func isMn(r rune) bool {
-	return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
-}
+func NormalizeName(base64 []byte) (uuid.UUID, error) {
 
-func (d CreateFileDTO) NormalizeName() {
-	d.Name = strings.ReplaceAll(d.Name, " ", "_")
-	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
-	d.Name, _, _ = transform.String(t, d.Name)
+	hash := sha256.Sum256(base64)
+	uuid := uuid.NewSHA1(uuid.Nil, hash[:])
+	return uuid, nil
 }
 
 func NewFile(dto CreateFileDTO) (*File, error) {
