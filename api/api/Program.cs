@@ -1,6 +1,8 @@
 using Common;
 using Common.Interfaces;
-
+using Database;
+using Database.Interfaces;
+using Database.Repositories;
 using Kafka.Interfaces;
 using Kafka.Services;
 
@@ -12,8 +14,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSingleton<DataContext>();
 builder.Services.AddSingleton<IConfigurationSettings, ConfigurationSettings>();
 builder.Services.AddSingleton<IKafkaProducesService, KafkaProducesService>();
+builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 
 var app = builder.Build();

@@ -9,6 +9,8 @@ networks:
     driver: bridge
   kafka:
     driver: bridge
+  postgres:
+    driver: bridge
 
 services:
   api:
@@ -19,22 +21,19 @@ services:
       - external
       - internal
       - kafka
+      - postgres
     ports:
       - "8080:8080"
     depends_on:
       - file-service
       - nginx
       - kafka
+      - postgres
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENV}
     restart: always
     deploy:
       replicas: 1
-      resources:
-        limits:
-          memory: 1024M
-        reservations:
-          memory: 512M
 
   file-service:
     build:
@@ -48,26 +47,20 @@ services:
       - files
     deploy:
       replicas: 1
-      resources:
-        limits:
-          memory: 1024M
-        reservations:
-          memory: 2048M
 
-  # ml-processing-service:
-  #   build: ./ml-processing-service
-  #   networks:
-  #     - internal
-  #     - kafka
-  #   depends_on:
-  #     - file-service
-  #     - zookeeper
-  #     - kafka
-  #   environment:
-  #     - ENV=${ENV}
-  #   restart: always
-  #   deploy:
-  #     replicas: ${REPLICAS}
+  ml-processing-service:
+    build: ./ml-processing-service
+    networks:
+      - internal
+      - kafka
+    depends_on:
+      # - file-service
+      - kafka
+    environment:
+      - ENV=${ENV}
+    restart: always
+    deploy:
+      replicas: ${REPLICAS}
 
   zookeeper:
     image: bitnami/zookeeper:latest
@@ -122,6 +115,33 @@ services:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
 
+  postgres:
+    image: postgres
+    ports:
+      - '5001:5432'
+    networks:
+      - 'postgres'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres_db
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4:7
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    networks:
+      - 'postgres'
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
   minio:
     image: minio/minio:latest
     networks:
@@ -141,3 +161,5 @@ services:
 
 volumes:
   storage-minio:
+  pgdata:
+  pgadmin-data:
