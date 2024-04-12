@@ -1,7 +1,9 @@
-﻿namespace Kafka.Interfaces;
+﻿using Models.KafkaMessages;
+
+namespace Kafka.Interfaces;
 
 public interface IKafkaProducesService
 {
-    Task WriteTraceLogAsync(object value);
-    Task TestLog(object value);
+    Task WriteTraceLogAsync(RequestMessage value);
+    Task TestLog(RequestMessage value);
 }

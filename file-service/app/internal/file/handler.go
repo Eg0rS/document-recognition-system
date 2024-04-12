@@ -11,7 +11,7 @@ import (
 
 const (
 	filesURL = "/api/files"
-	fileURL = "/api/files/:id"
+	fileURL  = "/api/files/:id"
 )
 
 type Handler struct {
@@ -30,16 +30,12 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) error {
 	h.Logger.Info("GET FILE")
 
 	h.Logger.Debug("get note_uuid from URL")
-	noteUUID := r.URL.Query().Get("note_uuid")
-	if noteUUID == "" {
-		return apperror.BadRequestError("note_uuid query parameter is required")
-	}
 
 	h.Logger.Debug("get fileId from context")
 	params := r.Context().Value(httprouter.ParamsKey).(httprouter.Params)
 	fileId := params.ByName("id")
 
-	f, err := h.FileService.GetFile(r.Context(), noteUUID, fileId)
+	f, err := h.FileService.GetFile(r.Context(), fileId)
 	if err != nil {
 		return err
 	}
@@ -48,7 +44,7 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 
 	w.Write(f.Bytes)
-	
+
 	return nil
 }
 
@@ -57,12 +53,8 @@ func (h *Handler) GetFilesByNoteUUID(w http.ResponseWriter, r *http.Request) err
 	w.Header().Set("Content-Type", "form/json")
 
 	h.Logger.Debug("get note_uuid from URL")
-	noteUUID := r.URL.Query().Get("note_uuid")
-	if noteUUID == "" {
-		return apperror.BadRequestError("note_uuid query parameter is required")
-	}
 
-	file, err := h.FileService.GetFilesByNoteUUID(r.Context(), noteUUID)
+	file, err := h.FileService.GetFilesByNoteUUID(r.Context())
 	if err != nil {
 		return err
 	}
@@ -97,12 +89,12 @@ func (h *Handler) CreateFile(w http.ResponseWriter, r *http.Request) error {
 	fileInfo := files[0]
 	fileReader, err := fileInfo.Open()
 	dto := CreateFileDTO{
-		Name: fileInfo.Filename,
-		Size: fileInfo.Size,
+		Name:   fileInfo.Filename,
+		Size:   fileInfo.Size,
 		Reader: fileReader,
 	}
 
-	err = h.FileService.Create(r.Context(), r.Form.Get("note_uuid"), dto)
+	err = h.FileService.Create(r.Context(), dto)
 	if err != nil {
 		return err
 	}
@@ -119,12 +111,7 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) error {
 	params := r.Context().Value(httprouter.ParamsKey).(httprouter.Params)
 	fileId := params.ByName("id")
 
-	noteUUID := r.URL.Query().Get("note_uuid")
-	if noteUUID == "" {
-		return apperror.BadRequestError("note_uuid query parameter is required")
-	}
-
-	err := h.FileService.Delete(r.Context(), noteUUID, fileId)
+	err := h.FileService.Delete(r.Context(), fileId)
 	if err != nil {
 		return err
 	}

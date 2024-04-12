@@ -17,6 +17,7 @@ type Config struct {
 		Endpoint  string `yaml:"endpoint" env-required:"true"`
 		AccessKey string `yaml:"access_key" env-required:"true"`
 		SecretKey string `yaml:"secret_key" env-required:"true"`
+		Bucket    string `yaml:"bucket" env-required:"true"`
 	} `yaml:"minio"`
 }
 
