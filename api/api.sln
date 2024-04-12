@@ -6,6 +6,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kafka", "Kafka\Kafka.csproj", "{86F87192-3822-4283-93C7-5FB5ECCC3362}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Models", "Models\Models.csproj", "{63099092-BCB8-414A-A183-E44B2BED5B55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cluster", "Cluster\Cluster.csproj", "{95039698-41C4-4E37-B51A-C83ACE399B44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86F87192-3822-4283-93C7-5FB5ECCC3362}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63099092-BCB8-414A-A183-E44B2BED5B55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63099092-BCB8-414A-A183-E44B2BED5B55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63099092-BCB8-414A-A183-E44B2BED5B55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63099092-BCB8-414A-A183-E44B2BED5B55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95039698-41C4-4E37-B51A-C83ACE399B44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95039698-41C4-4E37-B51A-C83ACE399B44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95039698-41C4-4E37-B51A-C83ACE399B44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95039698-41C4-4E37-B51A-C83ACE399B44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

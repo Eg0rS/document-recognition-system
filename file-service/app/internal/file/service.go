@@ -20,43 +20,43 @@ func NewService(noteStorage Storage, logger logging.Logger) (Service, error) {
 }
 
 type Service interface {
-	GetFile(ctx context.Context, noteUUID, fileName string) (f *File, err error)
-	GetFilesByNoteUUID(ctx context.Context, noteUUID string) ([]*File, error)
-	Create(ctx context.Context, noteUUID string, dto CreateFileDTO) error
-	Delete(ctx context.Context, noteUUID, fileName string) error
+	GetFile(ctx context.Context, fileName string) (f *File, err error)
+	GetFilesByNoteUUID(ctx context.Context) ([]*File, error)
+	Create(ctx context.Context, dto CreateFileDTO) error
+	Delete(ctx context.Context, fileName string) error
 }
 
-func (s *service) GetFile(ctx context.Context, noteUUID, fileId string) (f *File, err error) {
-	f, err = s.storage.GetFile(ctx, noteUUID, fileId)
+func (s *service) GetFile(ctx context.Context, fileId string) (f *File, err error) {
+	f, err = s.storage.GetFile(ctx, fileId)
 	if err != nil {
 		return f, err
 	}
 	return f, nil
 }
 
-func (s *service) GetFilesByNoteUUID(ctx context.Context, noteUUID string) ([]*File, error) {
-	files, err := s.storage.GetFilesByNoteUUID(ctx, noteUUID)
+func (s *service) GetFilesByNoteUUID(ctx context.Context) ([]*File, error) {
+	files, err := s.storage.GetFilesByNoteUUID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return files, nil
 }
 
-func (s *service) Create(ctx context.Context, noteUUID string, dto CreateFileDTO) error {
+func (s *service) Create(ctx context.Context, dto CreateFileDTO) error {
 	dto.NormalizeName()
 	file, err := NewFile(dto)
 	if err != nil {
 		return err
 	}
-	err = s.storage.CreateFile(ctx, noteUUID, file)
+	err = s.storage.CreateFile(ctx, file)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *service) Delete(ctx context.Context, noteUUID, fileName string) error {
-	err := s.storage.DeleteFile(ctx, noteUUID, fileName)
+func (s *service) Delete(ctx context.Context, fileName string) error {
+	err := s.storage.DeleteFile(ctx, fileName)
 	if err != nil {
 		return err
 	}

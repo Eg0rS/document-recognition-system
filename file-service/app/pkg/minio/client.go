@@ -19,9 +19,10 @@ type Object struct {
 type Client struct {
 	logger      logging.Logger
 	minioClient *minio.Client
+	bucket      string
 }
 
-func NewClient(endpoint, accessKeyID, secretAccessKey string, logger logging.Logger) (*Client, error) {
+func NewClient(endpoint, accessKeyID, secretAccessKey, bucket string, logger logging.Logger) (*Client, error) {
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
 		Secure: false,
@@ -33,33 +34,33 @@ func NewClient(endpoint, accessKeyID, secretAccessKey string, logger logging.Log
 	return &Client{
 		logger:      logger,
 		minioClient: minioClient,
+		bucket:      bucket,
 	}, nil
 }
 
-func (c *Client) GetFile(ctx context.Context, bucketName, fileId string) (*minio.Object, error) {
-	reqCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	obj, err := c.minioClient.GetObject(reqCtx, bucketName, fileId, minio.GetObjectOptions{})
+func (c *Client) GetFile(ctx context.Context, fileId string) (*minio.Object, error) {
+	object, err := c.minioClient.GetObject(ctx, c.bucket, fileId, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get file with id: %s from minio bucket %s. err: %w", fileId, bucketName, err)
+		c.logger.Errorf("failed to get object key=%s from minio bucket %s. err: %v", fileId, c.bucket, err)
+		return nil, nil
 	}
-	return obj, nil
+
+	return object, nil
 }
 
-func (c *Client) GetBucketFiles(ctx context.Context, bucketName string) ([]*minio.Object, error) {
+func (c *Client) GetBucketFiles(ctx context.Context) ([]*minio.Object, error) {
 	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	var files []*minio.Object
-	for lobj := range c.minioClient.ListObjects(reqCtx, bucketName, minio.ListObjectsOptions{WithMetadata: true}) {
+	for lobj := range c.minioClient.ListObjects(reqCtx, c.bucket, minio.ListObjectsOptions{WithMetadata: true}) {
 		if lobj.Err != nil {
-			c.logger.Errorf("failed to list object from minio bucket %s. err: %v", bucketName, lobj.Err)
+			c.logger.Errorf("failed to list object from minio bucket %s. err: %v", c.bucket, lobj.Err)
 			continue
 		}
-		object, err := c.minioClient.GetObject(ctx, bucketName, lobj.Key, minio.GetObjectOptions{})
+		object, err := c.minioClient.GetObject(ctx, c.bucket, lobj.Key, minio.GetObjectOptions{})
 		if err != nil {
-			c.logger.Errorf("failed to get object key=%s from minio bucket %s. err: %v", lobj.Key, bucketName, lobj.Err)
+			c.logger.Errorf("failed to get object key=%s from minio bucket %s. err: %v", lobj.Key, c.bucket, lobj.Err)
 			continue
 		}
 		files = append(files, object)
@@ -67,21 +68,24 @@ func (c *Client) GetBucketFiles(ctx context.Context, bucketName string) ([]*mini
 	return files, nil
 }
 
-func (c *Client) UploadFile(ctx context.Context, fileId, fileName, bucketName string, fileSize int64, reader io.Reader) error {
+func (c *Client) UploadFile(ctx context.Context, fileId, fileName string, fileSize int64, reader io.Reader) error {
 	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	exists, errBucketExists := c.minioClient.BucketExists(ctx, bucketName)
+	exists, errBucketExists := c.minioClient.BucketExists(ctx, c.bucket)
+	var list, _ = c.minioClient.ListBuckets(ctx)
+	if list == nil {
+	}
 	if errBucketExists != nil || !exists {
-		c.logger.Warnf("no bucket %s. creating new one...", bucketName)
-		err := c.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		c.logger.Warnf("no bucket %s. creating new one...", c.bucket)
+		err := c.minioClient.MakeBucket(ctx, c.bucket, minio.MakeBucketOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to create new bucket. err: %w", err)
 		}
 	}
 
-	c.logger.Debugf("put new object %s to bucket %s", fileName, bucketName)
-	_, err := c.minioClient.PutObject(reqCtx, bucketName, fileId, reader, fileSize,
+	c.logger.Debugf("put new object %s to bucket %s", fileName, c.bucket)
+	info, err := c.minioClient.PutObject(reqCtx, c.bucket, fileId, reader, fileSize,
 		minio.PutObjectOptions{
 			UserMetadata: map[string]string{
 				"Name": fileName,
@@ -91,11 +95,12 @@ func (c *Client) UploadFile(ctx context.Context, fileId, fileName, bucketName st
 	if err != nil {
 		return fmt.Errorf("failed to upload file. err: %w", err)
 	}
+	fmt.Println(info)
 	return nil
 }
 
-func (c *Client) DeleteFile(ctx context.Context, noteUUID, fileName string) error {
-	err := c.minioClient.RemoveObject(ctx, noteUUID, fileName, minio.RemoveObjectOptions{})
+func (c *Client) DeleteFile(ctx context.Context, fileName string) error {
+	err := c.minioClient.RemoveObject(ctx, c.bucket, fileName, minio.RemoveObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete file. err: %w", err)
 	}

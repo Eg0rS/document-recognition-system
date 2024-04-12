@@ -3,12 +3,13 @@ using Common.Interfaces;
 using Confluent.Kafka;
 using Kafka.Interfaces;
 using Microsoft.Extensions.Logging;
+using Models.KafkaMessages;
 
 namespace Kafka.Services;
 
 public class KafkaProducesService : IKafkaProducesService
 {
-    private readonly IProducer<Null, string> producer;
+    private readonly IProducer<Null, RequestMessage> producer;
     private readonly ILogger<KafkaProducesService> logger;
     private readonly string topic;
 
@@ -16,12 +17,9 @@ public class KafkaProducesService : IKafkaProducesService
     {
         this.logger = logger;
         topic = settings.KafkaSettings.KafkaTopicProducer;
-        producer = new ProducerBuilder<Null, string>(new ProducerConfig
+        producer = new ProducerBuilder<Null, RequestMessage>(new ProducerConfig
         {
-            LingerMs = 2000,
-            BatchSize = 1000,
-            QueueBufferingMaxMessages = 500,
-            BootstrapServers = settings.KafkaSettings.KafkaConnection
+            LingerMs = 2000, BatchSize = 1000, QueueBufferingMaxMessages = 500, BootstrapServers = settings.KafkaSettings.KafkaConnection
         }).SetLogHandler((_, logMessage) =>
         {
             if (logMessage.Level != SyslogLevel.Info && logMessage.Level != SyslogLevel.Debug)
@@ -31,27 +29,28 @@ public class KafkaProducesService : IKafkaProducesService
         }).Build();
     }
 
-    public async Task WriteTraceLogAsync(object value)
+    public async Task WriteTraceLogAsync(RequestMessage value)
     {
         try
         {
-            await producer.ProduceAsync(topic, new Message<Null, string> { Value = value.ToJson() });
+            await producer.ProduceAsync(topic, new Message<Null, RequestMessage> { Value = value });
         }
         catch (ProduceException<Null, string> exc)
         {
-            logger.LogError($"Send message to kafka failed: {exc.Error}. Message: {value.ToJson()}");
+            logger.LogError("Send message to kafka failed: {ExcError}. Message: {Json}", exc.Error, value.ToJson());
             _ = Task.CompletedTask;
         }
     }
-    public async Task TestLog(object value)
+
+    public async Task TestLog(RequestMessage value)
     {
         try
         {
-            await producer.ProduceAsync("test-topic", new Message<Null, string> { Value = value.ToJson() });
+            await producer.ProduceAsync("test-topic", new Message<Null, RequestMessage> { Value = value });
         }
         catch (ProduceException<Null, string> exc)
         {
-            logger.LogError($"Send message to kafka failed: {exc.Error}. Message: {value.ToJson()}");
+            logger.LogError("Send message to kafka failed: {ExcError}. Message: {Json}", exc.Error, value.ToJson());
             _ = Task.CompletedTask;
         }
     }

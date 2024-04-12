@@ -33,7 +33,7 @@ func main() {
 	metricHandler := metric.Handler{Logger: logger}
 	metricHandler.Register(router)
 
-	fileStorage, err := minio.NewStorage(cfg.MinIO.Endpoint, cfg.MinIO.AccessKey, cfg.MinIO.SecretKey, logger)
+	fileStorage, err := minio.NewStorage(cfg.MinIO.Endpoint, cfg.MinIO.AccessKey, cfg.MinIO.SecretKey, cfg.MinIO.Bucket, logger)
 	if err != nil {
 		logger.Fatal(err)
 	}

@@ -17,6 +17,8 @@ public class ConfigurationSettings : IConfigurationSettings
     {
         KafkaConnection = configuration.GetSection("Kafka").GetSection("Connection").Value,
         KafkaTopicProducer = configuration.GetSection("Kafka").GetSection("TopicProducer").Value,
-        KafkaTopicConsumer = configuration.GetSection("Kafka").GetSection("TopicConsumer").Value
+        KafkaTopicConsumer = configuration.GetSection("Kafka").GetSection("TopicConsumer").Value,
+        KafkaGroupIdConsumer = configuration.GetSection("Kafka").GetSection("GroupIdConsumer").Value,
+        KafkaGroupIdProducer = configuration.GetSection("Kafka").GetSection("GroupIdProducer").Value
     };
 }

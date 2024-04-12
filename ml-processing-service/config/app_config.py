@@ -9,6 +9,8 @@ class AppConfig:
         if env is None:
             env = 'Development'
 
+        print(env)
+
         config_file = './.config/' + env + '.json'
         with open(config_file, 'r') as file:
             self.config = json.load(file)
