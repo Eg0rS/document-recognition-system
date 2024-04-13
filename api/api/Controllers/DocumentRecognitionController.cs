@@ -1,8 +1,12 @@
 ﻿using api.ApiServices;
+using api.DbModels;
 using api.DtoModels;
+using Database;
+using Database.Interfaces;
 using Kafka.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Models.KafkaMessages;
+using Newtonsoft.Json;
 
 namespace api.Controllers;
 
@@ -15,11 +19,14 @@ public class DocumentRecognitionController : ControllerBase
 {
     private readonly FileService fileService;
     private readonly IKafkaProducesService kafkaProducesService;
+    private readonly IConnection connection;
 
-    public DocumentRecognitionController(FileService fileService, IKafkaProducesService kafkaProducesService)
+
+    public DocumentRecognitionController(FileService fileService, IKafkaProducesService kafkaProducesService, IConnection connection)
     {
         this.fileService = fileService;
         this.kafkaProducesService = kafkaProducesService;
+        this.connection = connection;
     }
 
     [HttpPost]
@@ -32,16 +39,17 @@ public class DocumentRecognitionController : ControllerBase
 
         var imageBytes = Convert.FromBase64String(imageData.Image);
 
-        var id = await fileService.UploadFileAsync(imageBytes);
+        var fileId = await fileService.UploadFileAsync(imageBytes);
         var guid = Guid.NewGuid().ToString();
-        var kafkaMessage = new RequestMessage { Guid = guid, FileId = id };
+        var kafkaMessage = new RequestMessage { Guid = guid, FileId = fileId };
 
-
+        await AddRequestToDb(imageData.UserId, guid, fileId);
         await kafkaProducesService.WriteTraceLogAsync(kafkaMessage);
 
 
         return Ok();
     }
+
 
     [HttpGet("{userId}")]
     public async Task<IActionResult> GetUserDocuments(string userId)
@@ -202,5 +210,58 @@ public class DocumentRecognitionController : ControllerBase
             },
         };
         return Ok(listResults);
+    }
+
+
+    [HttpGet("test/{userId}")]
+    public async Task<IActionResult> GetUserDocumentsTest(string userId)
+    {
+        var queryObject = new QueryObject(
+            "SELECT id as Id, user_id as UserId, guid as Guid, file_id as FileId FROM requests WHERE user_id = @user_id",
+            new { user_id = userId });
+        var requests = await connection.ListOrEmpty<DbRequest>(queryObject);
+        var listResults = new List<DbResult>();
+        if (requests.Count != 0)
+        {
+            var queryObjectResult = new QueryObject(
+                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM results WHERE guid in ({string.Join(", ", requests.Select(x => x.Guid).ToList())})");
+            listResults.AddRange(await connection.ListOrEmpty<DbResult>(queryObjectResult));
+        }
+
+
+        var resultList = new List<Result>();
+        foreach (var request in requests)
+        {
+            var result = listResults.FirstOrDefault(x => x.Guid == request.Guid);
+            if (result != null)
+            {
+                resultList.Add(new Result()
+                {
+                    UserId = request.UserId,
+                    Guid = result.Guid,
+                    Type = result.Type,
+                    Series = result.Series,
+                    Number = result.Number,
+                    PageNumber = result.PageNumber,
+                    Confidence = result.Confidence,
+                    FileId = result.FileId,
+                    Data = JsonConvert.DeserializeObject<Dictionary<string, string>>(result.Data)
+                });
+            }
+            else
+            {
+                resultList.Add(new Result() { UserId = request.UserId, Guid = request.Guid, Status = 0 });
+            }
+        }
+
+        return Ok(resultList);
+    }
+
+    private async Task AddRequestToDb(string imageDataUserId, string guid, string fileId)
+    {
+        var queryObject = new QueryObject(
+            "INSERT INTO requests (user_id, guid, file_id) VALUES (@user_id, @guid, @file_id) RETURNING id",
+            new { user_id = imageDataUserId, guid = guid, file_id = fileId });
+        await connection.CommandWithResponse<int>(queryObject);
     }
 }

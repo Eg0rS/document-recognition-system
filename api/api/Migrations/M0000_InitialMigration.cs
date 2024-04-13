@@ -16,8 +16,14 @@ public class M0000_InitialMigration: Migration
         Create.Table("resolutions")
             .WithColumn("id").AsInt64().Identity().NotNullable().PrimaryKey()
             .WithColumn("guid").AsString().NotNullable()
-            .WithColumn("file_id").AsString().NotNullable()
-            .WithColumn("data").AsString().NotNullable();
+            .WithColumn("type").AsString()
+            .WithColumn("series").AsString()
+            .WithColumn("number").AsString()
+            .WithColumn("page_number").AsInt64()
+            .WithColumn("confidence").AsDecimal()
+            .WithColumn("file_id").AsString()
+            .WithColumn("data").AsString();
+
     }
 
     public override void Down()

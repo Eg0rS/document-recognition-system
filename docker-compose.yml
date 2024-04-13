@@ -21,14 +21,13 @@ services:
       - external
       - internal
       - kafka
-      - postgres
     ports:
       - "8080:8080"
     depends_on:
       - file-service
       - nginx
       - kafka
-      - postgres
+      - database
     environment:
       - ASPNETCORE_ENVIRONMENT=${ENV}
     restart: always
@@ -54,7 +53,7 @@ services:
       - internal
       - kafka
     depends_on:
-      # - file-service
+      - file-service
       - kafka
     environment:
       - ENV=${ENV}
@@ -115,32 +114,19 @@ services:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
 
-  postgres:
-    image: postgres
-    ports:
-      - '5001:5432'
-    networks:
-      - 'postgres'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres_db
-
-  pgadmin:
-    container_name: pgadmin4_container
-    image: dpage/pgadmin4:7
+  database:
+    image: postgres:16
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'root'
+      POSTGRES_DB: 'production'
     networks:
-      - 'postgres'
+      - internal
+    ports:
+      - "5432:5432"
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - database-pg:/var/lib/postgresql/data
 
   minio:
     image: minio/minio:latest
@@ -161,5 +147,4 @@ services:
 
 volumes:
   storage-minio:
-  pgdata:
-  pgadmin-data:
+  database-pg:
