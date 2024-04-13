@@ -35,7 +35,7 @@ var app = builder.Build();
 var serviceProvider = app.Services.CreateScope().ServiceProvider;
 
 var runner = serviceProvider.GetRequiredService<IMigrationRunner>();
-runner.MigrateUp();
+//runner.MigrateUp();
 
 app.UseHttpsRedirection();
 app.MapControllers();
