@@ -108,7 +108,6 @@ public class DocumentRecognitionController : ControllerBase
                     { "engine_type", "123" },
                     { "number", "123" },
                     { "pts-segmentation", "123" },
-                    { "pts-segmentation", "123" },
                     { "series", "123" },
                     { "vin", "123" },
                 }
