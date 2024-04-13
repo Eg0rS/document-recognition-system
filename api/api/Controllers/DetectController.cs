@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 
 namespace api.Controllers;
 
-
 /// <summary>
 /// Контроллер для проверки решения задачи хакатона
 /// </summary>
@@ -31,7 +30,7 @@ public class DetectController : ControllerBase
         this.kafkaEventHandler = kafkaEventHandler;
     }
 
-    [HttpPost("detect")]
+    [HttpPost]
     public async Task<IActionResult> Detect([FromBody] ImageDataForHackTask imageDataForHackTask)
     {
         if (imageDataForHackTask == null || string.IsNullOrEmpty(imageDataForHackTask.Image))
@@ -48,19 +47,18 @@ public class DetectController : ControllerBase
         await kafkaProducesService.WriteTraceLogAsync(kafkaMessage);
         var tcs = new TaskCompletionSource<string>();
 
-        EventHandler<string> handler = null;
+        EventHandler<ResultMessage> handler = null;
         handler = (sender, message) =>
         {
-            var massageJson = JsonConvert.DeserializeObject<ResultMessage>(message);
-            if (massageJson?.Guid == guid)
+            if (message?.Guid == guid)
             {
                 var response = new ResultForHackTask
                 {
-                    Type = massageJson.Type,
-                    Series = massageJson.Series,
-                    Number = massageJson.Number,
-                    Confidence = massageJson.Confidence,
-                    PageNumber = massageJson.PageNumber
+                    Type = message.Type,
+                    Series = message.Series,
+                    Number = message.Number,
+                    Confidence = message.Confidence,
+                    PageNumber = message.PageNumber
                 };
                 tcs.SetResult(response.ToJson());
                 kafkaEventHandler.MessageReceived -= handler; // Отписываемся от события
