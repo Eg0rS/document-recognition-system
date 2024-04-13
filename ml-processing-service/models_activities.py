@@ -43,7 +43,7 @@ def convert_predict_class_en(pred_class):
         type_class = "personal_passport"
         page_number = 2
     elif (pred_class == "passport_first_page"):
-        type_class == "personal_passport"
+        type_class = "personal_passport"
         page_number = 1
     elif (pred_class == "sts_ver1"):
         type_class = "vehicle_certificate"
@@ -225,7 +225,7 @@ def get_model(cls_name):
     elif (cls_name == "vehicle_passport"):
         pred_model = YOLO('models/segmentation/best_pts.pt')  # load a custom model
     elif (cls_name == "vehicle_certificate"):
-        pred_model = YOLO('../models/segmentation/best_sts.pt')  # load a custom model
+        pred_model = YOLO('models/segmentation/best_sts.pt')  # load a custom model
 
     return pred_model
 
