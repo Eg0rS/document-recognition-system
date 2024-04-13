@@ -1,6 +1,9 @@
-﻿using api.ApiServices;
+﻿using System.Globalization;
+using api.ApiServices;
 using api.DbModels;
 using api.DtoModels;
+using Common;
+using CsvHelper;
 using Database;
 using Database.Interfaces;
 using Kafka.Interfaces;
@@ -223,8 +226,12 @@ public class DocumentRecognitionController : ControllerBase
         var listResults = new List<DbResult>();
         if (requests.Count != 0)
         {
+            var list = requests.Select(x => x.Guid).ToList();
+            var result = string.Join(", ", list.Select(e => $"'{e}'"));
             var queryObjectResult = new QueryObject(
-                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid in ({string.Join(", ", requests.Select(x => x.Guid).ToList())})");
+                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid in ({result})");
+            var t = queryObjectResult.ToJson();
+            Console.WriteLine(t);
             listResults.AddRange(await connection.ListOrEmpty<DbResult>(queryObjectResult));
         }
 
@@ -255,6 +262,49 @@ public class DocumentRecognitionController : ControllerBase
         }
 
         return Ok(resultList);
+    }
+
+    [HttpGet("{guid}")]
+    public async Task<IActionResult> GetDocument(string guid)
+    {
+        var queryObject = new QueryObject(
+            "SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid = @guid",
+            new { guid = guid });
+        var result = await connection.FirstOrDefault<DbResult>(queryObject);
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        var queryObject2 = new QueryObject(
+            "SELECT id as Id, user_id as UserId, guid as Guid, file_id as FileId FROM requests WHERE guid = @guid",
+            new { guid = guid });
+        var request = await connection.FirstOrDefault<DbRequest>(queryObject2);
+        if (request == null)
+        {
+            return NotFound();
+        }
+
+        var result1 = new Result()
+        {
+            UserId = request.UserId,
+            Guid = result.Guid,
+            Type = result.Type,
+            Series = result.Series,
+            Number = result.Number,
+            PageNumber = result.PageNumber,
+            Confidence = result.Confidence,
+            FileId = result.FileId,
+            Data = JsonConvert.DeserializeObject<Dictionary<string, string>>(result.Data)
+        };
+
+        using var memoryStream = new MemoryStream();
+        await using var writer = new StreamWriter(memoryStream);
+        await using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        csv.WriteRecord(result1);
+        await writer.FlushAsync();
+        var content = memoryStream.ToArray();
+        return File(content, "text/csv", "output.csv");
     }
 
     private async Task AddRequestToDb(string imageDataUserId, string guid, string fileId)
