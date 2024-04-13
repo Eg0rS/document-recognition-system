@@ -38,16 +38,29 @@ def from_eng_name_to_rus(IMG_PATH):
 
 def convert_predict_class_en(pred_class):
     type_class = ""
-    if (pred_class == "passport_address" or pred_class == "passport_first_page"):
+    page_number = 0
+    if (pred_class == "passport_address"):
         type_class = "personal_passport"
-    elif (pred_class == "sts_ver1" or pred_class == "sts_ver2"):
+        page_number = 2
+    elif (pred_class == "passport_first_page"):
+        type_class == "personal_passport"
+        page_number = 1
+    elif (pred_class == "sts_ver1"):
         type_class = "vehicle_certificate"
-    elif (pred_class == "vu_ver1" or pred_class == "vu_ver2"):
+        page_number = 1
+    elif (pred_class == "sts_ver2"):
+        type_class = "vehicle_certificate"
+        page_number = 2
+    elif (pred_class == "vu_ver1"):
         type_class = "driver_license"
+        page_number = 1
+    elif (pred_class == "vu_ver2"):
+        type_class = "driver_license"
+        page_number = 2
     elif (pred_class == "pts"):
         type_class = "vehicle_passport"
 
-    return type_class
+    return type_class, page_number
 
 def convert_predict_class_ru(pred_class):
     ru_class=""
