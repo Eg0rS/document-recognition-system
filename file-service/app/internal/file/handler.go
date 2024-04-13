@@ -1,6 +1,7 @@
 package file
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -116,7 +117,7 @@ func (h *Handler) CreateFile(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.Write(keyBytes)
+	w.Write(bytes.Trim(keyBytes, "\""))
 	w.WriteHeader(http.StatusCreated)
 
 	return nil
