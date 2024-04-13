@@ -9,10 +9,12 @@ public class KafkaConsumerService : BackgroundService
 {
     private readonly IConsumer<Ignore, string> consumer;
     private readonly ILogger<KafkaConsumerService> logger;
+    private readonly KafkaEventHandler kafkaEventHandler;
 
-    public KafkaConsumerService(IConfigurationSettings settings, ILogger<KafkaConsumerService> logger)
+    public KafkaConsumerService(IConfigurationSettings settings, ILogger<KafkaConsumerService> logger, KafkaEventHandler kafkaEventHandler)
     {
         this.logger = logger;
+        this.kafkaEventHandler = kafkaEventHandler;
         var topic = settings.KafkaSettings.KafkaTopicConsumer;
         consumer = new ConsumerBuilder<Ignore, string>(new ConsumerConfig
         {
@@ -40,7 +42,8 @@ public class KafkaConsumerService : BackgroundService
             var consumeResult = consumer.Consume(stoppingToken);
 
             logger.LogInformation(consumeResult.Message.Key + " - " + consumeResult.Message.Value);
-            
+            await kafkaEventHandler.HandleAsync(consumeResult.Message.Value);
+
             consumer.Commit();
         }
     }

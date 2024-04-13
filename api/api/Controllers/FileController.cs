@@ -1,22 +1,32 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using api.ApiServices;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace api.Controllers;
 
+/// <summary>
+/// Контроллер для скачивания расмеченных документов для мобильного приложения
+/// </summary>
 [ApiController]
 [Route("[controller]")]
 public class FileController : ControllerBase
 {
-    private readonly ILogger<FileController> logger;
+    private readonly FileService fileService;
 
-    public FileController(ILogger<FileController> logger)
+    public FileController(FileService fileService)
     {
-        this.logger = logger;
+        this.fileService = fileService;
     }
 
-
     [HttpGet("{fileId}")]
-    public IActionResult DownloadFile(string fileId)
+    public async Task<IActionResult> GetFile(string fileId)
     {
-        return Ok();
+        var file = await fileService.DownloadFileAsync(fileId);
+        if (file == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(JsonConvert.SerializeObject(file));
     }
 }

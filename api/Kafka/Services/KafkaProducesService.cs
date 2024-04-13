@@ -26,16 +26,16 @@ public class KafkaProducesService : IKafkaProducesService
             {
                 this.logger.LogError($"Kafka producer error. {logMessage.Message}");
             }
-        }).Build();
+        }).SetValueSerializer(new RequestMessageSerializer()).Build();
     }
 
     public async Task WriteTraceLogAsync(RequestMessage value)
     {
         try
         {
-            await producer.ProduceAsync(topic, new Message<Null, RequestMessage> { Value = value });
+            await producer.ProduceAsync(topic, new Message<Null, RequestMessage> { Key = null, Value = value });
         }
-        catch (ProduceException<Null, string> exc)
+        catch (ProduceException<Ignore, string> exc)
         {
             logger.LogError("Send message to kafka failed: {ExcError}. Message: {Json}", exc.Error, value.ToJson());
             _ = Task.CompletedTask;
