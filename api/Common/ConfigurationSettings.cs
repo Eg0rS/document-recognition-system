@@ -12,6 +12,8 @@ public class ConfigurationSettings : IConfigurationSettings
     {
         this.configuration = configuration;
     }
+    
+    public string DbConnection => configuration.GetSection("ConnectionStrings").GetSection("DatabaseConnection").Value;
 
     public KafkaSettings KafkaSettings => new KafkaSettings
     {

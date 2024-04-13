@@ -1,43 +1,45 @@
 ﻿using api.ApiServices;
 using api.DtoModels;
 using Common;
-using Database.Interfaces;
 using Kafka.Interfaces;
 using Kafka.Services;
 using Microsoft.AspNetCore.Mvc;
 using Models.KafkaMessages;
+using Newtonsoft.Json;
 
 namespace api.Controllers;
 
+
+/// <summary>
+/// Контроллер для проверки решения задачи хакатона
+/// </summary>
 [ApiController]
 [Route("[controller]")]
 public class DetectController : ControllerBase
 {
     private readonly ILogger<DetectController> logger;
-    private readonly ITestRepository testRepository;
     private readonly FileService fileService;
     private readonly IKafkaProducesService kafkaProducesService;
-    private readonly KafkaEventHandler  kafkaEventHandler;
+    private readonly KafkaEventHandler kafkaEventHandler;
 
-    public DetectController(ILogger<DetectController> logger, ITestRepository testRepository, FileService fileService, IKafkaProducesService kafkaProducesService, KafkaEventHandler kafkaEventHandler)
+    public DetectController(ILogger<DetectController> logger, FileService fileService, IKafkaProducesService kafkaProducesService, KafkaEventHandler kafkaEventHandler)
     {
         this.logger = logger;
-        this.testRepository = testRepository;
+
         this.fileService = fileService;
         this.kafkaProducesService = kafkaProducesService;
         this.kafkaEventHandler = kafkaEventHandler;
     }
 
     [HttpPost("detect")]
-    public async Task<IActionResult> Detect([FromBody] ImageData imageData)
+    public async Task<IActionResult> Detect([FromBody] ImageDataForHackTask imageDataForHackTask)
     {
-        if (imageData == null || string.IsNullOrEmpty(imageData.Image))
+        if (imageDataForHackTask == null || string.IsNullOrEmpty(imageDataForHackTask.Image))
         {
             return BadRequest("Image data is missing.");
         }
 
-
-        var imageBytes = Convert.FromBase64String(imageData.Image);
+        var imageBytes = Convert.FromBase64String(imageDataForHackTask.Image);
 
         var id = await fileService.UploadFileAsync(imageBytes);
         var guid = Guid.NewGuid().ToString();
@@ -45,22 +47,31 @@ public class DetectController : ControllerBase
         Console.WriteLine(kafkaMessage.ToJson());
         await kafkaProducesService.WriteTraceLogAsync(kafkaMessage);
         var tcs = new TaskCompletionSource<string>();
-        kafkaEventHandler.MessageReceived += (sender, message) =>
+
+        EventHandler<string> handler = null;
+        handler = (sender, message) =>
         {
-            if (message == guid)
+            var massageJson = JsonConvert.DeserializeObject<ResultMessage>(message);
+            if (massageJson?.Guid == guid)
             {
-                tcs.SetResult(message);
+                var response = new ResultForHackTask
+                {
+                    Type = massageJson.Type,
+                    Series = massageJson.Series,
+                    Number = massageJson.Number,
+                    Confidence = massageJson.Confidence,
+                    PageNumber = massageJson.PageNumber
+                };
+                tcs.SetResult(response.ToJson());
+                kafkaEventHandler.MessageReceived -= handler; // Отписываемся от события
             }
         };
+
+        kafkaEventHandler.MessageReceived += handler;
+
+
         var receivedMessage = await tcs.Task;
 
         return Ok(receivedMessage);
-    }
-
-    [HttpPost("detect/test")]
-    public IActionResult Test()
-    {
-        testRepository.Execute();
-        return Ok();
     }
 }

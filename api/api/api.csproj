@@ -22,9 +22,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="FluentMigrator" Version="5.2.0" />
+      <PackageReference Include="FluentMigrator.Runner" Version="5.2.0" />
       <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.4" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
       <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+
     </ItemGroup>
 
 
