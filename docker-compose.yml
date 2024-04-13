@@ -52,6 +52,7 @@ services:
     networks:
       - internal
       - kafka
+      - files
     depends_on:
       - file-service
       - kafka

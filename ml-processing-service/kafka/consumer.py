@@ -14,31 +14,17 @@ from aiokafka import AIOKafkaConsumer
 from config.kafka_config import KafkaConfig
 from aiokafka import AIOKafkaProducer
 
+from models_activities import convert_predict_class_en, rotate_image_to_normal, classify_document, get_model, get_images_text, get_plotted_image
+
 from ultralytics import YOLO
 from PIL import Image
 from enum import Enum
-
-class DocumentType(Enum):
-    personal_passport = 1
-    vehicle_passport = 2
-    vehicle_certificate = 3
-    driver_license = 4
-
-document_types = {
-    "passport_address": "personal_passport",
-    "passport_first_page": "personal_passport",
-    "pts": "vehicle_passport",
-    "sts_ver1": "vehicle_certificate",
-    "sts_ver2": "vehicle_certificate",
-    "vu_ver1": "driver_license",
-    "vu_ver2": "driver_license"
-}
 
 class Consumer:
     def __init__(self, config: KafkaConfig):
         self.config = config
 
-    def get_file(self, file_id):
+    def get_file_image(self, file_id):
         r = requests.get('http://' + 'file-service' + ':' + '10002' + '/api/files/' + file_id)
         # print(r.content)
         image_data = base64.b64encode(r.content)
@@ -64,6 +50,15 @@ class Consumer:
         #         probs += prob
 
         return results[0]
+
+    def post_image(self, image):
+        buffered = io.BytesIO()
+        image.save(buffered, format='png')
+        img_encoded = base64.b64encode(buffered.getvalue())
+        img_str = img_encoded.decode('ascii')
+        json_data = json.dumps({'image': img_str})
+        r = requests.post('http://' + 'file-service' + ':' + '10002' + '/api/files', data=json_data)
+        return r.text
 
     def post_file(self, result, source_img, image_guid):
         reader = easyocr.Reader(['en', 'ru'])
@@ -125,27 +120,50 @@ class Consumer:
             auto_offset_reset='earliest',
             enable_auto_commit=True,
             group_id='request-consumer-group',
-            auto_commit_interval_ms=1000,
+            auto_commit_interval_ms=200000,
             value_deserializer=lambda x: x.decode('utf-8')
         )
 
         producer = AIOKafkaProducer(
-            bootstrap_servers=self.config.get_host() + ":" + self.config.get_port()
+            bootstrap_servers=self.config.get_host() + ":" + self.config.get_port(),
+            value_serializer=lambda x: json.dumps(x).encode('utf-8')
         )
 
         await self.consumer.start()
         await producer.start()
         print("consumer started")
+
         try:
             async for msg in self.consumer:
                 print("consumed: ", msg.topic, msg.partition, msg.offset,
                       msg.key, msg.value, msg.timestamp)
-                file = self.get_file(msg.value)
-                inference_result = self.inference(file)
-                kafka_msg = self.post_file(inference_result, file, msg.value)
-                await producer.send("resolutions", str.encode(kafka_msg))
-                await self.consumer.commit()
+                request = json.loads(msg.value)
+                image = self.get_file_image(request['FileId'])
+                top_prob, cls_name = classify_document(image)
+                cls_name = convert_predict_class_en(cls_name)
+                seg_model = get_model(cls_name)
+                inf_result, texts, series, number = get_images_text(seg_model, image, cls_name)
+                plotted_image = get_plotted_image(inf_result)
+                post_result = self.post_image(plotted_image)
+
+                kafka_message = {
+                    'Guid': request['Guid'],
+                    'FileId': post_result,
+                    'Confidence': top_prob,
+                    'Type': cls_name,
+                    'Series': series,
+                    'Number': number,
+                    'PageNumber': 0,
+                    'OptionalFields': texts
+                }
+
+                # inference_result = self.inference(image)
+                # kafka_msg = self.post_file(inference_result, image, msg.value)
+
+                await producer.send("resolutions", kafka_message)
         finally:
+            print("consumer stopper")
+            await producer.stop()
             await self.consumer.stop()
 
     def start_consume(self):
