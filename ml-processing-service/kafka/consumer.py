@@ -140,7 +140,7 @@ class Consumer:
                 request = json.loads(msg.value)
                 image = self.get_file_image(request['FileId'])
                 top_prob, cls_name = classify_document(image)
-                cls_name = convert_predict_class_en(cls_name)
+                cls_name, page_number = convert_predict_class_en(cls_name)
                 seg_model = get_model(cls_name)
                 inf_result, texts, series, number = get_images_text(seg_model, image, cls_name)
                 plotted_image = get_plotted_image(inf_result)
@@ -153,7 +153,7 @@ class Consumer:
                     'Type': cls_name,
                     'Series': series,
                     'Number': number,
-                    'PageNumber': 0,
+                    'PageNumber': page_number,
                     'OptionalFields': texts
                 }
 
