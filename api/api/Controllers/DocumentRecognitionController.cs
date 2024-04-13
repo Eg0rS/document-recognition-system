@@ -224,7 +224,7 @@ public class DocumentRecognitionController : ControllerBase
         if (requests.Count != 0)
         {
             var queryObjectResult = new QueryObject(
-                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM results WHERE guid in ({string.Join(", ", requests.Select(x => x.Guid).ToList())})");
+                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid in ({string.Join(", ", requests.Select(x => x.Guid).ToList())})");
             listResults.AddRange(await connection.ListOrEmpty<DbResult>(queryObjectResult));
         }
 
