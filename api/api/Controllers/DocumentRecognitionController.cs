@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System.Collections;
+using System.Globalization;
+using System.Text;
 using api.ApiServices;
 using api.DbModels;
 using api.DtoModels;
@@ -300,29 +302,38 @@ public class DocumentRecognitionController : ControllerBase
             Data = JsonConvert.DeserializeObject<Dictionary<string, string>>(result.Data)
         };
 
-        using var memoryStream = new MemoryStream();
-        
-        await using (var writer = new StreamWriter(memoryStream))
+        using (var content = await ExportAsync(new List<Result> { result1 }))
         {
-            await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            Response.ContentType = "application/octet-stream";
+
+
+            Response.Headers.Add("Content-Disposition", "attachment; filename=\"data.csv\"");
+
+
+            await content.CopyToAsync(Response.Body);
+        }
+
+        return new EmptyResult();
+    }
+
+    private async Task<MemoryStream> ExportAsync(IEnumerable records)
+    {
+        byte[] content = null;
+        using (var mem = new MemoryStream())
+        using (var writer = new StreamWriter(mem, Encoding.GetEncoding("utf-8")))
+        {
+            using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
-                // Ваш код записи данных в CSV
-                csv.WriteRecord(result1);
-                
-                // Убедимся, что все данные записаны в поток
-                await writer.FlushAsync();
+                csvWriter.NextRecord();
+                await csvWriter.WriteRecordsAsync(records).ConfigureAwait(false);
+                await csvWriter.FlushAsync().ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
+                content = mem.ToArray();
             }
         }
-        
-        // Переместим указатель позиции в начало потока
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        
-        // Возвращаем файл в ответе
-        return new FileStreamResult(memoryStream, "text/csv")
-        {
-            FileDownloadName = "data.csv" // Имя файла, который будет загружен клиентом
-        };
-        
+
+        var output = new MemoryStream(content);
+        return output;
     }
 
     private async Task AddRequestToDb(string imageDataUserId, string guid, string fileId)
