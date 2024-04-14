@@ -54,8 +54,8 @@ public class DocumentRecognitionController : ControllerBase
     }
 
 
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetUserDocuments(string userId)
+    [HttpGet("test/{userId}")]
+    public async Task<IActionResult> GetUserDocumentsTest(string userId)
     {
         var listResults = new List<Result>()
         {
@@ -216,8 +216,8 @@ public class DocumentRecognitionController : ControllerBase
     }
 
 
-    [HttpGet("test/{userId}")]
-    public async Task<IActionResult> GetUserDocumentsTest(string userId)
+    [HttpGet("{userId}")]
+    public async Task<IActionResult> GetUserDocuments(string userId)
     {
         var queryObject = new QueryObject(
             "SELECT id as Id, user_id as UserId, guid as Guid, file_id as FileId FROM requests WHERE user_id = @user_id",
@@ -229,7 +229,7 @@ public class DocumentRecognitionController : ControllerBase
             var list = requests.Select(x => x.Guid).ToList();
             var result = string.Join(", ", list.Select(e => $"'{e}'"));
             var queryObjectResult = new QueryObject(
-                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid in ({result})");
+                $"SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as PageNumber, confidence as Confidence, data as Data FROM resolutions WHERE guid in ({result})");
             var t = queryObjectResult.ToJson();
             Console.WriteLine(t);
             listResults.AddRange(await connection.ListOrEmpty<DbResult>(queryObjectResult));
@@ -244,6 +244,7 @@ public class DocumentRecognitionController : ControllerBase
             {
                 resultList.Add(new Result()
                 {
+                    Status = 1,
                     UserId = request.UserId,
                     Guid = result.Guid,
                     Type = result.Type,
@@ -268,7 +269,7 @@ public class DocumentRecognitionController : ControllerBase
     public async Task<IActionResult> GetDocument(string guid)
     {
         var queryObject = new QueryObject(
-            "SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as Number, confidence as Confidence, data as Data FROM resolutions WHERE guid = @guid",
+            "SELECT id as Id, guid as Guid, file_id as FileId, type as Type, series as Series, number as Number, page_number as PageNumber, confidence as Confidence, data as Data FROM resolutions WHERE guid = @guid",
             new { guid = guid });
         var result = await connection.FirstOrDefault<DbResult>(queryObject);
         if (result == null)
@@ -287,6 +288,7 @@ public class DocumentRecognitionController : ControllerBase
 
         var result1 = new Result()
         {
+            Status = 1,
             UserId = request.UserId,
             Guid = result.Guid,
             Type = result.Type,

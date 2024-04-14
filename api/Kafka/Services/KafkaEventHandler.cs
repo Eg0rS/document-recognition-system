@@ -31,7 +31,7 @@ public class KafkaEventHandler
                 confidence = massageJson.Confidence,
                 page_number = massageJson.PageNumber,
                 file_id = massageJson.FileId,
-                data = JsonConvert.SerializeObject(massageJson.Data)
+                data = JsonConvert.SerializeObject(massageJson.OptionalFields)
             });
         await connection.Command(queryObject);
     }

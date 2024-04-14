@@ -9,5 +9,5 @@ public class ResultMessage
     public string Series { get; set; }
     public string Number { get; set; }
     public int? PageNumber { get; set; }
-    public Dictionary<string,string> Data { get; set; }
+    public Dictionary<string,string> OptionalFields { get; set; }
 }
