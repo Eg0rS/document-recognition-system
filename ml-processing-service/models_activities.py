@@ -131,8 +131,11 @@ def get_images_text(model, image, predict_class):
 
     for i in range(len(boxes.cls.tolist())):
         crop_cls = names[boxes.cls.tolist()[i]]
+
+        need_rotate = crop_cls == 'pass_series_and_number'
+
         image_cropped = image.crop(boxes[i].xyxy[0].tolist())
-        text_results = get_data_from_docs(reader, image_cropped)
+        text_results = get_data_from_docs(reader, image_cropped, need_rotate)
         print(text_results)
 
         # buffered = io.BytesIO()
@@ -145,7 +148,7 @@ def get_images_text(model, image, predict_class):
 
         total_text = total_text.strip()
         if total_text != '':
-            if crop_cls not in dict:
+            if crop_cls not in dict or need_rotate:
                 dict[crop_cls] = total_text
             else:
                 dict[crop_cls] += " " + total_text
@@ -167,6 +170,10 @@ def get_images_text(model, image, predict_class):
 
         if key in dict and key in numbers_keys and number == "":
             number = ready_dict[value]
+
+        if key == 'pass_series_and_number':
+            series = ready_dict[value][:5].strip()
+            number = ready_dict[value][5:].strip()
 
     return result, ready_dict, series, number
 
@@ -369,11 +376,15 @@ def get_series_and_number_pass(image):
     return result
 
 def get_reader():
-    reader = easyocr.Reader(['ru', 'en'])
+    reader = easyocr.Reader(['ru', 'en'], model_storage_directory='EasyOCR/model', download_enabled=False)
     return reader
 
-def get_data_from_docs(reader, image):
-    rotated_image1 = rotate_image_to_normal(image)
+def get_data_from_docs(reader, image, need_rotate):
+    # rotated_image1 = rotate_image_to_normal(image)
+    rotated_image1 = image
+    if need_rotate:
+        print("ROTATING")
+        rotated_image1 = image.rotate(90, expand=True)
     result = reader.readtext(np.asarray(rotated_image1))
     return result
 
