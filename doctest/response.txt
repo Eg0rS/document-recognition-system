@@ -1,0 +1,1 @@
+{"Type":"driver_license","Series":"99 10","Number":"876422","PageNumber":1,"Confidence":1.000000}
