@@ -264,7 +264,7 @@ public class DocumentRecognitionController : ControllerBase
         return Ok(resultList);
     }
 
-    [HttpGet("{guid}")]
+    [HttpGet("download/{guid}")]
     public async Task<IActionResult> GetDocument(string guid)
     {
         var queryObject = new QueryObject(
