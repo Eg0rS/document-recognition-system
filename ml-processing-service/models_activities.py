@@ -102,6 +102,7 @@ def rotate_image_to_normal(IMG_PATH):
     return IMG_PATH
 
 def get_images_text(model, image, predict_class):
+    image = rotate_image_to_normal(image)
     results = model.predict(image)
 
     result = results[0]
