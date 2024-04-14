@@ -301,13 +301,26 @@ public class DocumentRecognitionController : ControllerBase
         };
 
         using var memoryStream = new MemoryStream();
-        await using var writer = new StreamWriter(memoryStream);
-        await using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.WriteRecord(result1);
-        await writer.FlushAsync();
+        
+        await using (var writer = new StreamWriter(memoryStream))
+        {
+            await using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                // Ваш код записи данных в CSV
+                csv.WriteRecord(result1);
+                
+                // Убедимся, что все данные записаны в поток
+                await writer.FlushAsync();
+            }
+        }
+        
+        // Переместим указатель позиции в начало потока
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        
+        // Возвращаем файл в ответе
         return new FileStreamResult(memoryStream, "text/csv")
         {
-            FileDownloadName = "data.csv" 
+            FileDownloadName = "data.csv" // Имя файла, который будет загружен клиентом
         };
         
     }
