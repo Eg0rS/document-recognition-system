@@ -305,8 +305,11 @@ public class DocumentRecognitionController : ControllerBase
         await using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
         csv.WriteRecord(result1);
         await writer.FlushAsync();
-        var content = memoryStream.ToArray();
-        return File(content, "text/csv", "output.csv");
+        return new FileStreamResult(memoryStream, "text/csv")
+        {
+            FileDownloadName = "data.csv" 
+        };
+        
     }
 
     private async Task AddRequestToDb(string imageDataUserId, string guid, string fileId)
